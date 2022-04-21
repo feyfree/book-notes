@@ -1,6 +1,6 @@
 # Kubernetes Preview
 
-# 1. What's Kuberntes
+## 1. What's Kuberntes
 
 Kubernetes was created by Google based on lessons learned running containers at scale for a lot of years. It was
 donated to the community as an open-source project and is now the industry standard API for deploying and
@@ -15,7 +15,7 @@ Foundation (CNCF).
 
 kuberntes 相关概念， 从机器分工的角度可以分为 master node，worker node；node 上面运行着 pod， pod 内部运行着 container；
 
-从 container 到 pod， 再到 node， kuberntes 实际上做的这么一件事情， 创建应用需要的资源， 并使之运行。
+从 container 到 pod， 再到 node， kubernetes 实际上做的这么一件事情： 创建应用需要的资源， 并使之运行。
 
 
 
