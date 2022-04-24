@@ -245,7 +245,12 @@ kubernetes   ClusterIP      10.96.0.1        <none>        443/TCP          40h
 svc-test     NodePort       10.110.144.154   <none>        8080:30001/TCP   5m40s
 ```
 
-注意从外部的Browser 中访问的话 使用 localhost:9000 就可以访问到
+**注意**
+
+1. 因为我使用的是docker desktop 挂载的k8s,  因为External-IP 显示是localhost， 相当于是外网IP， 所以可以通过localhost 访问到这个SVC，所以从外部的Browser 中访问的话 使用 localhost:9000 就可以访问到
+2. 为啥 localhost: 31667 无法访问， 因为这个相当于是NodePort 所以需要 是 NodeIP:NodePort 才能访问到。
+
+
 
 ### 2.3 清理操作
 
