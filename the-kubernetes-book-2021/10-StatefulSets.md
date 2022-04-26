@@ -72,3 +72,7 @@ The same is true for scaling operations. If a StatefulSet Pod is deleted as part
 
 ### 1.6 Network ID and headless Services
 
+We’ve already said that StatefulSets are for applications that need Pods to be predictable and long-lived. As a result, other parts of the application as well as other applications may need to connect directly to individual Pods. To make this possible,StatefulSets use a **headless Service** to create predictable DNS hostnames for every Pod replica. Other apps can then query DNS for the full list of Pod replicas and use these details to connect directly to Pods.
+
+* headless services: without an IP address （spec.clusterIP set to None）
+* governing services
