@@ -2,11 +2,11 @@
 
 ## VMs Architecture
 
-![](https://tcs.teambition.net/storage/312gaf7c5361c67ed52c3f0594a6ba153463?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzNDM0MSwiaWF0IjoxNjQ5OTI5NTQxLCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmdhZjdjNTM2MWM2N2VkNTJjM2YwNTk0YTZiYTE1MzQ2MyJ9.hO0tLHlTH1yVlUpukL80v66lOX69XtyDMeWfnd4LXr8&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426163226-vms-architecture.png)
 
 ## Containers Architecture
 
-![](https://tcs.teambition.net/storage/312gb998e090a7ce4db1aabec52fe7b9c0c4?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzNDM0MSwiaWF0IjoxNjQ5OTI5NTQxLCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmdiOTk4ZTA5MGE3Y2U0ZGIxYWFiZWM1MmZlN2I5YzBjNCJ9.N_rWkOweyLBuhpGqJknXPTMdjMn6xoMBuDKoeAaJetc&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426163303-container-architecture.png)
 
 
 

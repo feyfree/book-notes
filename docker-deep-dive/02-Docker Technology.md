@@ -2,7 +2,7 @@
 
 # 1. Docker Architecture
 
-![](https://tcs.teambition.net/storage/312g109212a53d77c77db5dc81c1bcf74c2b?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzMTQ3OCwiaWF0IjoxNjQ5OTI2Njc4LCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmcxMDkyMTJhNTNkNzdjNzdkYjVkYzgxYzFiY2Y3NGMyYiJ9.KjxCHyuf7XQUspPqcMfbIPP7DRg0OBCnfdi45vhc4y4&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/docker-architecture.png)
 
 # 2. 一些名词
 
@@ -38,11 +38,11 @@ LXC，其名称来自Linux软件容器（Linux Containers）的缩写，一种�
 
 ## High Level Overview
 
-![](https://tcs.teambition.net/storage/312gc400a7421284e070621d59f7db95c0b5?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzMTQ3OCwiaWF0IjoxNjQ5OTI2Njc4LCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmdjNDAwYTc0MjEyODRlMDcwNjIxZDU5ZjdkYjk1YzBiNSJ9.9gPT_XD8E8e-Hn4llSlCHUhRyDScTNMe-hQ5Sf3iXn0&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426162750-docker-high-level-overview.png)
 
 ## Old Version Architecture
 
-![](https://tcs.teambition.net/storage/312gdeb3a9a7a250d3c8027e28e7bdcffb88?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzMTQ3OCwiaWF0IjoxNjQ5OTI2Njc4LCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmdkZWIzYTlhN2EyNTBkM2M4MDI3ZTI4ZTdiZGNmZmI4OCJ9.IW6k3n8sdTdZYt1X-FpPljldfp4dOvCF18BBP4czFnY&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426162835-docker-old-version.png)
 
 When Docker was first released, the Docker engine had two major components:
 
@@ -56,7 +56,7 @@ The Docker daemon was a monolithic binary. It contained all of the code for the 
 
 ## Current Version Architecture
 
-![](https://tcs.teambition.net/storage/312g55e6b14c12844c704b2affcfbc0dd2f9?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzMTQ3OCwiaWF0IjoxNjQ5OTI2Njc4LCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmc1NWU2YjE0YzEyODQ0YzcwNGIyYWZmY2ZiYzBkZDJmOSJ9.pYGbtJEjhAhKfnM01BsuWiCGhE57cGes_CrFiKfKKao&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426162918-docker-current-version.png)
 
 ## Starting a new container (example)
 
@@ -79,7 +79,7 @@ docker daemon 实际上是会监听这个socket上面的数据
 
 实际上是runc 负责创建容器的
 
-![](https://tcs.teambition.net/storage/312gd6f1f6dc97bd4f41ab38409881ef96a7?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzMTQ3OCwiaWF0IjoxNjQ5OTI2Njc4LCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmdkNmYxZjZkYzk3YmQ0ZjQxYWIzODQwOTg4MWVmOTZhNyJ9.UNyJ1LEWRjX9VV2jzFIpVFZpFr9OFaZ2Rf8kOoPE9zE&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426163011-docker-runc.png)
 
 实际上当我们要创建一个容器的时候，现在 Docker Daemon 并不能直接帮我们创建了，而是请求 containerd 来创建一个容器，containerd 收到请求后，也并不会直接去操作容器，而是创建一个叫做 containerd-shim 的进程，让这个进程去操作容器，我们指定容器进程是需要一个父进程来做状态收集、维持 stdin 等 fd 打开等工作的，假如这个父进程就是 containerd，那如果 containerd 挂掉的话，整个宿主机上所有的容器都得退出了，而引入 containerd-shim 这个垫片就可以来规避这个问题了。
 

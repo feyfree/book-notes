@@ -1,4 +1,4 @@
-![](https://tcs.teambition.net/storage/312g4288f43d970570c8d3a55db5cbcc91d6?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzNDM0NywiaWF0IjoxNjQ5OTI5NTQ3LCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmc0Mjg4ZjQzZDk3MDU3MGM4ZDNhNTVkYjVjYmNjOTFkNiJ9.yt3GloNtYGBrImAZFk3mqkl78HhG6i7uGQdd5HmY-nU&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426163358-docker-steps.png)
 
 Containers are all about making apps simple to build, ship, and run. The process of containerizing an app looks like this:
 

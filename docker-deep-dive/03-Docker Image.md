@@ -1,6 +1,6 @@
 docker image 封装了应用运行时的底层依赖。image 是分层的， 而且像栈一样一层一层堆叠起来的。images 相当于为了运行应用， 封装了一个精简了的操作系统 + 应用所需文件。images 为了启动更快和更轻量， 一般来说都会设计很小。基于windows的镜像相对linux的相对大很多。
 
-![](https://tcs.teambition.net/storage/312g79e7fd89a7e7e0d83cab211e0c1705e3?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzNDMzMiwiaWF0IjoxNjQ5OTI5NTMyLCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmc3OWU3ZmQ4OWE3ZTdlMGQ4M2NhYjIxMWUwYzE3MDVlMyJ9.5tyohGw43SW-NrwhTtiuiQjTJGaiTgF-hFXA1gRIyzA&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426163102-images-containers.png)
 
 # Images and Containers
 
@@ -88,7 +88,7 @@ Deleted: sha256:4e38e38c8ce0b8d...6225e13b0bfe8cfa2321aec4bba
 
 # Image Layers
 
-![](https://tcs.teambition.net/storage/312g68269c4e71228a32f136bcece8e2d4af?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzNDMzMiwiaWF0IjoxNjQ5OTI5NTMyLCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmc2ODI2OWM0ZTcxMjI4YTMyZjEzNmJjZWNlOGUyZDRhZiJ9.6U3cr1p5h5jg1TrmQY0Mbwbj1SOwELgZuul_58cxR_k&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426163139-image-layers.png)
 
 
 

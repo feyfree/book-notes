@@ -312,7 +312,7 @@ Commercial support is available at
 
 # multi-host overlay networks
 
-![](https://tcs.teambition.net/storage/312ga6a30dc3e289a3f57f7d0edd25e910d1?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzNDM2NCwiaWF0IjoxNjQ5OTI5NTY0LCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmdhNmEzMGRjM2UyODlhM2Y1N2Y3ZDBlZGQyNWU5MTBkMSJ9.EHVIShaiCIq3yDIex2tB7bGUcY4qf4IdCUG4Py-MMeo&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426163525-multi-host-overlay-network.png)
 
 ## macvlan
 
@@ -324,7 +324,7 @@ macvlan 的demo 这里就不展开了
 
 # service discovery
 
-![](https://tcs.teambition.net/storage/312g5e47d19e0e69b2c699f5d186f53a9097?Signature=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBcHBJRCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9hcHBJZCI6IjU5Mzc3MGZmODM5NjMyMDAyZTAzNThmMSIsIl9vcmdhbml6YXRpb25JZCI6IiIsImV4cCI6MTY1MDUzNDM2NCwiaWF0IjoxNjQ5OTI5NTY0LCJyZXNvdXJjZSI6Ii9zdG9yYWdlLzMxMmc1ZTQ3ZDE5ZTBlNjliMmM2OTlmNWQxODZmNTNhOTA5NyJ9.9aUX6mXiLZ94P8lVDGXSuomghi-tLLhn6pxCoUWRLAk&download=image.png "")
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220426163605-docker-service-discovery.png)
 
 
 
