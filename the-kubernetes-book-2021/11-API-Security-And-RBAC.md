@@ -188,7 +188,11 @@ PolicyRule:
 
 ## 3. Admission Control
 
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220428110150-api-handle-requests.png)
+
 [使用准入控制器](https://kubernetes.io/zh/docs/reference/access-authn-authz/admission-controllers/)
+
+[搞懂 Kubernetes 准入控制](https://segmentfault.com/a/1190000041037182)
 
 ```bash
 ➜  ~ kubectl describe pod/kube-apiserver-docker-desktop --namespace kube-system | grep admission
@@ -212,3 +216,12 @@ PolicyRule:
 kube-apiserver -h | grep enable-admission-plugins
 ```
 
+我们主要从两个角度来理解为什么我们需要准入控制器：
+
+- 从安全的角度
+  - 我们需要明确在 Kubernetes 集群中部署的镜像来源是否可信，以免遭受攻击；
+  - 一般情况下，在 Pod 内尽量不使用 root 用户，或者尽量不开启特权容器等；
+
+- 从治理的角度
+  - 比如通过 label 对业务/服务进行区分，那么可以通过 admission controller 校验服务是否已经有对应的 label 存在之类的；
+  - 比如添加资源配额限制 ，以免出现资源超卖之类的情况
