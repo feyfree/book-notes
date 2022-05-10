@@ -156,7 +156,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 | %t         | Boolean                                                      |
 | %c         | Rune                                                         |
 | %s         | string                                                       |
-| %q         | quot ed str ing "abc" or rune 'c'                            |
+| %q         | quoted string "abc" or rune 'c'                              |
 | %v         | any value in a natural format                                |
 | %T         | type of any value                                            |
 | %%         | literal percent sig n (no operand)                           |
