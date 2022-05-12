@@ -545,3 +545,18 @@ It is not allowed to take the address of a constant. This is for 2 reasons:
 
 1. A constant may not have an address at all.
 2. And even if a constant value is stored in memory at runtime, this is to help the runtime to keep constants that: *constant*. If you could take the address of a constant value, you could assign the address (pointer) to a variable and you could change that (the pointed value, the value of the constant). Robert Griesemer (one of Go's authors) wrote why it's not allowed to take a string literal's address: *"If you could take the address of a string constant, you could call a function [that assigns to the pointed value resulting in] possibly strange effects - you certainly wouldn't want the literal string constant to change."* ([source](https://groups.google.com/d/msg/golang-nuts/mKJbGRRJm7c/K3k3x6-huw4J))
+
+```go
+/*
+const (
+	deadbeef = 0xdeadbeef        // untyped int with value 3735928559
+	aa       = uint32(deadbeef)  // uint32 with value 3735928559
+	bb       = float32(deadbeef) // float32 with value 3735928576 (rounded up)
+	cc       = float64(deadbeef) // float64 with value 3735928559 (exact)
+	dd       = int32(deadbeef)   // compile error: constant overflows int32
+	ee       = float64(1e309)    // compile error: constant overflows float64
+	ff       = uint(-1)          // compile error: constant underflows uint
+)
+*/
+```
+
