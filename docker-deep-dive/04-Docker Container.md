@@ -32,7 +32,7 @@
 
 1. "***-it***" represents interactive
 
-1. Stopping containers gracefully. ***docker container stop is ***more polite than*** rm -rf . ***
+1. Stopping containers gracefully. **docker container stop is** more polite than `rm -rf .`
 
 1. 容器的自愈能力（Self-healing containers with restart policies）
 
