@@ -12,6 +12,12 @@
 2. 避免变量被多个goroutines 访问，或者说是 变量仅限某一个goroutine 修改
 3. 允许多个goroutine 访问， 但是每次只有一个能访问 (mutual exclusion)
 
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220524182513-go-mantra01.png)
+
+这句话的翻译
+
+既然其他的goroutine 不能直接访问变量， 所以他们必须通过 channel 发送请求给指定 goroutine 去查询或者更新这个变量。 这就是 Go 的那句经典谚语： 不要通过共享内存去通信， 而是通过通信去共享内存。 
+
 ## 2. sync.Mutex
 
 **理解**
@@ -66,3 +72,21 @@ mutex 的目的是 **要保证这些变量的不变性保持，不会在后续�
 ## 6. The Race Detector
 
 可以使用 `-race` 进行启动， go build， go run， go test 等等， go 会帮助检查竞态的问题
+
+## 7. Goroutine Vs Threads
+
+**growable stacks**
+
+os threads 有固定的栈大小， 通常 2M大小， 所以对于某些场景， 可能存在过大或者过小的情况， goroutine 一般从 2K开始， 可以逐渐增加
+
+**goroutine scheduling**
+
+1. thread 一般是 os kernel 调度， 调度存在上下文切换
+2. The Go runtime contains its own scheduler that uses a technique known as **m:n scheduling**, because it multiplexes (or schedules) m goroutines on n OS threads.
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220525095827-go-scheduling.png)
+
+**GOMAXPROCS** 
+
+GOMAXPROCS is the n in m:n scheduling
+
