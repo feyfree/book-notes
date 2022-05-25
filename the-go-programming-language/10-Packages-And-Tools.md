@@ -25,5 +25,26 @@ db, err = sql.Open("sqlite3", dbname) // returns error:
 unknown driver "sqlite3"
 ```
 
-8. 
+## Go tools
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220525104926-go-tools.png)
+
+1. go path 的设定， 实际上相当于是 workspace如果不设定go path （为当前项目路径） 的话， 根据包名打包肯定是会失败的， 因为默认只会去 go root 下面去找
+
+```bash
+package books_learning/gopl/ch10 is not in GOROOT (/Users/feyfree/Develop/SDK/go1.17/src/books_learning/gopl/ch10)
+➜  ch09 git:(main) ✗ go build go_demo/books_learning/gopl/ch10
+package go_demo/books_learning/gopl/ch10 is not in GOROOT (/Users/feyfree/Develop/SDK/go1.17/src/go_demo/books_learning/gopl/ch10)
+```
+
+2. go的打包支持跨平台
+
+```go
+$ go build gopl.io/ch10/cross
+$ ./cross
+darwin amd64
+$ GOARCH=386 go build gopl.io/ch10/cross
+$ ./cross
+darwin 386
+```
 
