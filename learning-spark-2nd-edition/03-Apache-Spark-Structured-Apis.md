@@ -18,7 +18,7 @@ The RDD (Resilient Distributed Dataset ) is the most basic abstraction in Spark.
 2. partitions 使得 Spark 有能力去拆解分布在executors上面的partitions并行化计算任务。In some cases—for example, reading from HDFS—Spark will use locality information to send work to executors close to the data. That way less data is transmitted over the network
 3. And finally, an RDD has a compute function that produces an Iterator[T] for the data that will be stored in the RDD.
 
-但是以上的设计会存在一些问题
+但是以上的设计会面临一些问题
 
 1. 函数计算对Spark 是不透明的 （Spark 不知道计算函数是什么， 都是当成lambda表达式的）
 2. 比如Iterator[T]，Spark 可能仅仅知道在Python里面是个泛型对象
@@ -201,7 +201,7 @@ Column objects in a DataFrame can’t exist in isolation; each column is part of
 
 ### Rows
 
-A row in Spark is a generic Row object, containing one or more columns. Each col‐ umn may be of the same data type (e.g., integer or string), or they can have different types (integer, string, map, array, etc.). Because Row is an object in Spark and an ordered collection of fields, you can instantiate a Row in each of Spark’s supported lan‐ guages and access its fields by an index starting at 0:
+A row in Spark is a generic Row object, containing one or more columns. Each column may be of the same data type (e.g., integer or string), or they can have different types (integer, string, map, array, etc.). Because Row is an object in Spark and an ordered collection of fields, you can instantiate a Row in each of Spark’s supported languages and access its fields by an index starting at 0:
 
 ```shell
 >>> from pyspark.sql import Row
@@ -411,4 +411,134 @@ dsTemp.show(5, false)
 
 To recap, the operations we can perform on Datasets—filter(), map(), groupBy(), select(), take(), etc.—are similar to the ones on DataFrames. In a way, Datasets are similar to RDDs in that they provide a similar interface to its aforementioned meth‐ ods and compile-time safety but with a much easier to read and an object-oriented programming interface. 
 
-When we use Datasets, the underlying Spark SQL engine handles the creation, con‐version, serialization, and deserialization of the JVM objects. It also takes care of offJava heap memory management with the help of Dataset encoders.
+When we use Datasets, the underlying Spark SQL engine handles the creation, con‐version, serialization, and deserialization of the JVM objects. It also takes care of off-Java heap memory management with the help of Dataset encoders.
+
+## DataFrames Versus Datasets
+
+什么时候用 DataFrame or DataSet,  为什么这样选择
+
+1. 如果你想告诉Spark需要做什么， 而不是如何去做， 使用DataFrame 或者 Dataset
+2. 如果你想要丰富的语义， high-level 的抽象，DSL 操作， 使用DF 或者 DS
+3. 如果你想要严格的编译类型正确， 并且不介意为特定的 Dataset[T] 创建多个case class 的话， 使用Dataset
+4. 如果你的处理 要求high-level 的表达 filters， maps， aggregations (聚合)，计算平均数或者事求和， SQL 查询， 获取列， 或者是使用关系操作符， 在 semi-structured (半结构化)的数据上面， 请使用 DF 或者 DS
+5. 如果您的处理要求进行类似于 SQL 查询的关系转换，使用DF
+6. 如果你想得到Tungsten高效的编码序列化的优势的话， 使用DS
+7. 如果你在Spark 组件之间想要使用统一，编码优化， 以及简洁的API的话， 使用DF
+8. 如果你使用R， 用DF
+9. 如果你使用Python， 使用DF， 如果你想要更多的控制的话， 把它丢到RDD
+10. 如果你想要空间和速度的高效， 使用DF
+11. 如果你想要编译时就能捕捉错误而不是在运行的时候， 参考下图
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220531101354-when-errors-are-detected-using-the-structured-apis.png)
+
+### When to Use RDDs
+
+RDD api 一直被保留， 2.x 和 3.x 都支持。但是 Spark 2.x 和 3.x 更偏向于是使用DF的接口和语义
+
+但是也有一些场景你也可以考虑使用RDD
+
+1. 比如有一些三方的包还是使用的 是RDD 去写的
+2. 可以放弃DF，DS 带来的一些代码优化， 空间优化，和一些性能
+3. 希望更简洁的让Spark 去做一些查询
+
+实际上也可以使用
+
+`df.rdd` 这个method call 去得到RDD， 但是这里面有一定的开销， 不建议使用。DF 和 DS 实际都是RDDs 的上层建筑，在whole-stage code generation 中， 他们被分解开来去适配RDD 代码。
+
+## Spark SQL and the Underlying Engine
+
+Spark SQL engine 如下：
+
+1. 统一了Spark的组件， 允许多语言中的 DF/DS的抽象， 简化了结构化数据集的处理
+2. 连接Apache Hive metastore 和 tables
+3. 以特定的schema 从结构化的文件中， 读写结构话数据 （JSON，CSV等）， 并且将这些数据转化为临时表
+4. 提供了一个Spark SQL Shell
+5. 通过标准的JDBC/ODBC connectors, 构建了一个与外部工具之间的桥梁
+6. Generates optimized query plans and compact code for the JVM, for final execution
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220531110031-spark-sql-and-its-stack.png)
+
+### The Catalyst Optimizer
+
+The Catalyst optimizer takes a computational query and converts it into an execution plan. It goes through four transformational phases。
+
+1. Analysis 分析
+2. Logical optimization 逻辑优化
+3. Physical Planning 物理计划
+4. Code generation 代码生成
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220531110312-spark-computation%E2%80%99s-four-phase-journey.png)
+
+可以通过 explain 语句查询执行plan
+
+```python
+# In Python
+count_mnm_df = (mnm_df
+ .select("State", "Color", "Count")
+ .groupBy("State", "Color")
+ .agg(count("Count")
+ .alias("Total"))
+ .orderBy("Total", ascending=False))
+
+count_mnm_df.explain(True)
+
+-- In SQL
+SELECT State, Color, Count, sum(Count) AS Total
+FROM MNM_TABLE_NAME
+GROUP BY State, Color, Count
+ORDER BY Total DESC
+```
+
+```shell
+== Parsed Logical Plan ==
+'Sort ['Total DESC NULLS LAST], true
++- Aggregate [State#10, Color#11], [State#10, Color#11, count(Count#12) AS...]
+ +- Project [State#10, Color#11, Count#12]
+ +- Relation[State#10,Color#11,Count#12] csv
+== Analyzed Logical Plan ==
+State: string, Color: string, Total: bigint
+Sort [Total#24L DESC NULLS LAST], true
++- Aggregate [State#10, Color#11], [State#10, Color#11, count(Count#12) AS...]
+ +- Project [State#10, Color#11, Count#12]
+ +- Relation[State#10,Color#11,Count#12] csv
+== Optimized Logical Plan ==
+Sort [Total#24L DESC NULLS LAST], true
++- Aggregate [State#10, Color#11], [State#10, Color#11, count(Count#12) AS...]
+ +- Relation[State#10,Color#11,Count#12] csv
+== Physical Plan ==
+*(3) Sort [Total#24L DESC NULLS LAST], true, 0
++- Exchange rangepartitioning(Total#24L DESC NULLS LAST, 200)
+ +- *(2) HashAggregate(keys=[State#10, Color#11], functions=[count(Count#12)],
+output=[State#10, Color#11, Total#24L])
+ +- Exchange hashpartitioning(State#10, Color#11, 200)
+ +- *(1) HashAggregate(keys=[State#10, Color#11],
+functions=[partial_count(Count#12)], output=[State#10, Color#11, count#29L])
+ +- *(1) FileScan csv [State#10,Color#11,Count#12] Batched: false,
+Format: CSV, Location:
+InMemoryFileIndex[file:/Users/jules/gits/LearningSpark2.0/chapter2/py/src/...
+dataset.csv], PartitionFilters: [], PushedFilters: [], ReadSchema:
+struct<State:string,Color:string,Count:int>
+```
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220531112842-an-example-of-a-specific-query-transformation.png)
+
+**Phase 1: Analysis**
+Spark SQL engine 为 SQL 或者是DF query 构建抽象语法树
+
+**Phase 2: Logical optimization**
+
+1. 首先会构建一组plans
+2. 然后利用cost-based optimizer(CBO), 将 costs 列在每个plan上面
+
+这些plans以操作树的形式构建出来，比如包括
+
+常量折叠的处理， 预测下推，投影剪枝， 布尔表达式优化。Logical plan 是作为 physical 的输入的
+
+**Phase 3: Physical planning**
+这个阶段， Spark SQL 会利用Spark execution engine 中匹配的物理操作符， 从选定的logical plan 中创建优化过的physical plan
+
+**Phase 4: Code generation**
+最后一个阶段包含生成运行在每个机器上面的高效的Java 的字节码。因为Spark SQL 可以操作内存中的数据集，所以Spark 可以利用先进的code generation编译技术去加速执行。换句话说， 它表现的像一个编译器。Tungsten 项目就是干这件事的， 充当了一个whole-stage 的 code generation
+
+什么是whole-stage code generation。 它是一个物理查询优化阶段， 它将整个查询， 分解为单个函数， 避免虚拟的函数调用， 并且利用CPU 寄存器存储中间数据。 第二代 Tungsten （introduced in Spark 2.0） 使用了这个技术去为最后的执行生成压缩的RDD代码。这种流线型的策略极大的改善了CPU的利用率和性能
+
