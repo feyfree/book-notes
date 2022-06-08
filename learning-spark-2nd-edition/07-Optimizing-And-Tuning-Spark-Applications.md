@@ -273,3 +273,58 @@ Spark 有五种join 策略
 
 主要关注 BHJ 和 SMJ， 这俩是最长用的
 
+### Broadcast Hash Join
+
+Alson known as a **map-side-only join**
+
+两个 数据集合， 一个小的（适配driver 和 executor 的内存）， 另外一个大的 （最好避免移动）需要通过某种特定的条件或者是column 然后join 一起
+
+通过 Spark 的broadcast variable， 小的数据集通过driver 广播到 所有的Spark executors上面。 这种避免大规模的 exchange
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220608174148-%20bhj-the-smaller-data-set-is-broadcast-to-all-executors.png)
+
+如果 数据集合 小于 10MB 的话， Spark 会默认使用broadcast join。
+
+配置通过 `spark.sql.autoBroadcastJoinThreshold`
+
+如果你对你的内存很乐观的话， 你可以配置超过 10MB 甚至可以到100MB
+
+
+
+一个例子
+
+两个DF， 一个数据量大 （信息量全）， 一个数据量少
+
+比如 球员 和 俱乐部 一个球员归属于一个俱乐部
+
+我们可以强制使用 broadcast， 实际Spark 也会优化 小数据集去使用 broadcast
+
+ (In this code we are forcing Spark to do a broadcast join, but it will resort to this type of join by default if the size of the smaller data set is below the spark.sql.autoBroadcastJoinThreshold.)
+
+
+
+BHJ ： 最简单， 最快速
+
+避免了数据集合的shuffle
+
+broadcast 后， executor 上面就会具备全部的数据
+
+你只需要确保Spark Driver 上面有足够的内存， 以及在 executor 上面将 **smaller data set** 存储在内存里面
+
+At any time after the operation, you can see in the physical plan what join operation was performed by executing: 
+
+`joinedDF.explain(mode) `
+
+In Spark 3.0, you can use joinedDF.explain('mode') to display a readable and digestible output. The modes include 'simple', 'extended', 'codegen', 'cost', and 'formatted'.
+
+**When to use a broadcast hash join**
+
+1. When each key within the smaller and larger data sets is hashed to the same partition by Spark. 相同的 （hashed）key 被分到相同的分区上面
+2. 其中一个数据集很小 （相对于另外一个）， 满足default 配置， 以及内存足够的情况下
+3. 在非有序字段上面通过等值连接匹配
+4. 当你不考虑额外的带宽消耗，或者是OOM 错误； 因为 smaller data set 会被广播到所有的 executors上面
+
+Specifying a value of -1 in spark.sql.autoBroadcastJoinThreshold will cause Spark to always resort to a shuffle sort merge join, which we discuss in the next section.
+
+### Shuffle Sort Merge Join
+
