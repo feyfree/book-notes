@@ -328,3 +328,133 @@ Specifying a value of -1 in spark.sql.autoBroadcastJoinThreshold will cause Spar
 
 ### Shuffle Sort Merge Join
 
+sort-merge 算法是一种有效的方法，可以将两个大型数据集合并到一个可排序的、唯一的公共键上，并且可以分配或存储在同一分区中，即两个具有公共哈希键的数据集 在同一个分区上.从 Spark 的角度来看，这意味着每个数据集中具有相同键的所有行, 都在同一个executor的同一个分区上进行哈希处理。 显然，这意味着数据必须在executor之间托管或交换.
+
+故名思义， 这种join 有两个阶段
+
+1. sort phase 
+2. merge phase
+
+排序阶段通过所需的连接键对每个数据集进行排序； 合并阶段迭代每个数据集的行中的每个键，如果两个键匹配，则合并行。
+
+
+
+默认是通过`spark.sql.join.preferSortMerge Join`来配置
+
+
+
+代码示例：
+
+The main idea is to take two large Data‐ Frames, with one million records, and join them on two common keys, uid == users_id.
+
+```scala
+package main.scala.chapter7
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
+import org.apache.spark.storage.StorageLevel._
+import org.apache.spark.sql.SaveMode
+import scala.util.Random
+
+object SortMergeJoinBucketed_7_6 {
+
+  // curried function to benchmark any code or function
+  def benchmark(name: String)(f: => Unit) {
+    val startTime = System.nanoTime
+    f
+    val endTime = System.nanoTime
+    println(s"Time taken in $name: " + (endTime - startTime).toDouble / 1000000000 + " seconds")
+  }
+
+  // main class setting the configs
+  def main (args: Array[String] ) {
+
+    val spark = SparkSession.builder
+        .appName("SortMergeJoinBucketed")
+        .config("spark.sql.codegen.wholeStage", true)
+        .config("spark.sql.join.preferSortMergeJoin", true)
+        .config("spark.sql.autoBroadcastJoinThreshold", -1)
+        .config("spark.sql.defaultSizeInBytes", 100000)
+        .config("spark.sql.shuffle.partitions", 16)
+        .getOrCreate ()
+
+    import spark.implicits._
+
+    var states = scala.collection.mutable.Map[Int, String]()
+    var items = scala.collection.mutable.Map[Int, String]()
+    val rnd = new scala.util.Random(42)
+
+    // initialize states and items purchased
+    states += (0 -> "AZ", 1 -> "CO", 2-> "CA", 3-> "TX", 4 -> "NY", 5-> "MI")
+    items += (0 -> "SKU-0", 1 -> "SKU-1", 2-> "SKU-2", 3-> "SKU-3", 4 -> "SKU-4", 5-> "SKU-5")
+    // create dataframes
+    val usersDF = (0 to 100000).map(id => (id, s"user_${id}", s"user_${id}@databricks.com", states(rnd.nextInt(5))))
+          .toDF("uid", "login", "email", "user_state")
+    val ordersDF = (0 to 100000).map(r => (r, r, rnd.nextInt(100000), 10 * r* 0.2d, states(rnd.nextInt(5)), items(rnd.nextInt(5))))
+          .toDF("transaction_id", "quantity", "users_id", "amount", "state", "items")
+
+    // cache them on Disk only so we can see the difference in size in the storage UI
+    usersDF.persist(DISK_ONLY)
+    ordersDF.persist(DISK_ONLY)
+
+    // let's create five buckets, each DataFrame for their respective columns
+    // create bucket and table for uid
+    spark.sql("DROP TABLE IF EXISTS UsersTbl")
+    usersDF.orderBy(asc("uid"))
+      .write.format("parquet")
+      .mode(SaveMode.Overwrite)
+      // eual to number of cores I have on my laptop
+      .bucketBy(8, "uid")
+      .saveAsTable("UsersTbl")
+      // create bucket and table for users_id
+    spark.sql("DROP TABLE IF EXISTS OrdersTbl")
+    ordersDF.orderBy(asc("users_id"))
+      .write.format("parquet")
+      .bucketBy(8, "users_id")
+      .mode(SaveMode.Overwrite)
+      .saveAsTable("OrdersTbl")
+    // cache tables in memory so that we can see the difference in size in the storage UI
+    spark.sql("CACHE TABLE UsersTbl")
+    spark.sql("CACHE TABLE OrdersTbl")
+    spark.sql("SELECT * from OrdersTbl LIMIT 20")
+    // read data back in
+    val usersBucketDF = spark.table("UsersTbl")
+    val ordersBucketDF = spark.table("OrdersTbl")
+    // Now do the join on the bucketed DataFrames
+    val joinUsersOrdersBucketDF = ordersBucketDF.join(usersBucketDF, $"users_id" === $"uid")
+    joinUsersOrdersBucketDF.show(false)
+    joinUsersOrdersBucketDF.explain()
+    //joinUsersOrdersBucketDF.explain("formatted")
+
+    // uncomment to view the SparkUI otherwise the program terminates and shutdowsn the UI
+     Thread.sleep(200000000)
+  }
+}
+```
+
+before bucketing
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220609114045-before-bucketing-stages-of-the-spark.png)
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220609114218-before-bucketing-exchange-is-required.png)
+
+**Optimizing the shuffle sort merge join**
+
+after bucketing
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220609114335-after-bucketing-exchange-is-not-required.png)
+
+如果我们采用了: 对于相同的有序的key 或者 column (我们可能会频繁使用join操作的),  创建buckets, 这种做法可以使得我们消除 Exchange 的步骤. 这种相当于是 presort and preorganize,  这种可以提高效率, 并且避免进入Exchange 阶段,  直接进入 WholeStageCodegen 阶段
+
+**When to use a shuffle sort merge join**  
+
+什么时候用shuffle sort merge join
+
+1. 两个大的data set 之间的 common key, 能被排序, 并且能被分到同一分区
+2. 当你想在 matching sorted key 上面 做等值join 的时候
+3. 避免Exchange 和Sort 操作,  节省大量的网络中的Shuffle 操作
+
+## Spark UI
+
+略
