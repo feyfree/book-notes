@@ -285,3 +285,159 @@ val streamingQuery = counts
 
 略
 
+## Data Transformations
+
+These operations are broadly classified into stateless and stateful operations. We will define each type of operation and explain how to identify which operations are stateful;
+
+### Incremental Execution and Streaming State
+
+之前讲过,   Spark SQL 的 Catalyst optimizer 会将所有的DataFrame 的操作 转化成为优化过的 logical plan.
+
+The Spark SQL planner, which decides how to execute a logical plan, recognizes that this is a streaming logical plan that needs to operate on continuous data streams. Accordingly, instead of converting the logical plan to a one-time physical execution plan, the planner generates a continuous sequence of execution plans. Each execution plan updates the final result DataFrame incrementally—that is, the plan processes only a chunk of new data from the input streams and possibly some intermediate, partial result computed by the previous execution plan
+
+
+
+Each execution is considered as a micro-batch, and the partial intermediate result that is communicated between the executions is called the streaming “state.” Data‐ Frame operations can be broadly classified into stateless and stateful operations based on whether executing the operation incrementally requires maintaining a state
+
+### Stateless Transformations
+
+All projection operations (e.g., select(), explode(), map(), flatMap()) and selec‐ tion operations (e.g., filter(), where()) process each input record individually without needing any information from previous rows. This lack of dependence on prior input data makes them stateless operations.
+
+只有无状态操作的流式查询支持Append和Update输出模式，但不支持Complete模式。 这是有道理的：由于此类查询的任何已处理输出行都不能被任何未来数据修改，因此可以将其写入所有附加模式下的流式接收器（包括仅附加的接收器，如任何格式的文件）。 另一方面，此类查询自然不会跨输入记录组合信息，因此可能不会减少结果中的数据量。 不支持Complete Mode，因为存储不断增长的结果数据通常成本很高。 这与有状态转换形成鲜明对比，我们将讨论
+下一个
+
+### Stateful Transformations
+
+The simplest example of a stateful transformation is DataFrame.groupBy().count(), which generates a running count of the number of records received since the beginning of the query.
+
+**Distributed and fault-tolerant state management**
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220614134443-distributed-state-management-in-structured-streaming.png)
+
+To summarize, for all stateful operations, Structured Streaming ensures the correctness of the operation by automatically saving and restoring the state in a distributed manner. Depending on the stateful operation, all you may have to do is tune the state cleanup policy such that old keys and values can be automatically dropped from the cached state
+
+**Types of stateful operations**
+
+The essence of streaming state is to retain summaries of past data. Sometimes old summaries need to be cleaned up from the state to make room for new summaries. Based on how this is done, we can distinguish two types of stateful operations:
+
+*Managed stateful operations*
+
+* Streaming aggregations
+* Stream-stream joins
+* Streaming deduplication
+
+*Unmanaged stateful operations*
+
+These operations let you define your own custom state cleanup logic. The operations in this category are:
+
+* MapGroupsWithState
+* FlatMapGroupsWithState
+
+## Stateful Streaming Aggregations
+
+Structured Streaming can incrementally execute most DataFrame aggregation opera‐ tions. You can aggregate data by keys (e.g., streaming word count) and/or by time (e.g., count records received every hour).
+
+### Aggregations Not Based on Time
+
+Aggregations not involving time can be broadly classified into two categories:
+
+***Global aggregations***
+
+Aggregations across all the data in the stream. For example, say you have a stream of sensor readings as a streaming DataFrame named sensorReadings. You can calculate the running count of the total number of readings received with the following query:
+
+```scala
+// In Scala
+val runningCount = sensorReadings.groupBy().count()
+```
+
+Tips:
+
+**You cannot use direct aggregation operations like DataFrame.count() and Dataset.reduce() on streaming DataFrames**. This is because, for static DataFrames, these operations immediately return the final computed aggregates, whereas for streaming DataFrames the aggregates have to be continuously updated. Therefore, you have to always use **DataFrame.groupBy() or Dataset.groupByKey() for aggregations on streaming DataFrames**.
+
+***Grouped aggregations***
+
+Grouped aggregations
+
+Aggregations within each group or key present in the data stream. For example, if sensorReadings contains data from multiple sensors, you can calculate the running average reading of each sensor (say, for setting up a baseline value for each sensor) with the following:
+
+```scala
+// In Scala
+val baselineValues = sensorReadings.groupBy("sensorId").mean("value")
+```
+
+***All built-in aggregation functions***
+
+sum(), mean(), stddev(), countDistinct(), collect_set(), approx_count_dis tinct(), etc. Refer to the API documentation (Python and Scala) for more details.
+
+***Multiple aggregations computed together***
+
+You can apply multiple aggregation functions to be computed together in the fol‐ lowing manner:
+
+```scala
+// In Scala
+import org.apache.spark.sql.functions.*
+val multipleAggs = sensorReadings
+ .groupBy("sensorId")
+ .agg(count("*"), mean("value").alias("baselineValue"),
+ collect_set("errorCode").alias("allErrorCodes"))
+```
+
+***User-defined aggregation functions***
+
+All user-defined aggregation functions are supported. See the Spark SQL pro‐ gramming guide for more details on untyped and typed user-defined aggregation functions
+
+### Aggregations with Event-Time Windows
+
+```scala
+// In Scala
+import org.apache.spark.sql.functions.*
+sensorReadings
+ .groupBy("sensorId", window("eventTime", "5 minute"))
+ .count()
+```
+
+The key thing to note here is the window() function, which allows us to express the five-minute windows as a dynamically computed grouping column. When started, this query will effectively do the following for each sensor reading: 
+
+* Use the eventTime value to compute the five-minute time window the sensor reading falls into. 
+* Group the reading based on the composite group (\<computerd window>, SensorId). 
+* Update the count of the composite group.
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220614190402-mapping-of-event-time-to-tumbling-windows.png)
+
+```scala
+// In Scala
+sensorReadings
+ .groupBy("sensorId", window("eventTime", "10 minute", "5 minute"))
+ .count()
+```
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220614190629-mapping-of-event-time-to-multiple-overlapping-windows.png)
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220614191015-updated-counts-in-the-result-table-after-each-five-minute-trigger.png)
+
+一个新的windows 创建, 但是老的windows 仍然占用内存, 等待一些滞后的数据更新他们. 实际上, Query 很难知道滞后的数据到底要滞后多久. 
+
+所以 Too old to receive updates 问题出现了, 如何将 too old 的数据 丢弃掉. 
+
+watermark 出现了
+
+#### Handling late data with watermarks
+
+watermark 被定义为 是在event time 中移动的threshold,  表明的是在处理数据时候能查询到的最大的 event time
+
+The trailing gap, known as the **watermark delay**, defines how long the engine will wait for late data to arrive
+
+```scala
+// In Scala
+sensorReadings
+ .withWatermark("eventTime", "10 minutes")
+ .groupBy("sensorId", window("eventTime", "10 minutes", "5 minute"))
+ .mean("value")
+```
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220614191938-spark-late-data-watermark-illustration.png)
+
+x 轴是处理时间
+
+y 轴是event time
+
