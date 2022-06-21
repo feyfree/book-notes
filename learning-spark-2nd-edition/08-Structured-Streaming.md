@@ -441,3 +441,172 @@ x 轴是处理时间
 
 y 轴是event time
 
+理解上述图的含义
+
+1. 相当于是阶梯 (watermark)上面的数据都能被处理
+2. 阶梯下面的数据 实际上too late 的数据,会被丢弃
+
+#### Semantic guarantees with watermarks.
+
+在结束关于watermark的这一部分之前，让我们考虑一下watermark提供的精确语义保证。 10 分钟的watermark可确保引擎永远不会丢弃与输入数据中看到的最新事件时间相比延迟少于 10 分钟的任何数据。 但是，保证只在一个方向上是严格的。 延迟超过 10 分钟的数据不能保证被丢弃——也就是说，它可能会被聚合。延迟超过 10 分钟的输入记录是否会被实际聚合取决于接收记录的确切时间以及何时它被触发的微批处理
+
+#### Supported output modes
+
+Update mode
+
+在这种模式下，每个mirco-batch将只输出聚合更新的行。 此模式可用于所有类型的聚合。 特别是对于时间窗口聚合，watermark将确保定期清理状态。 这是使用流式聚合运行查询的最有用和最有效的模式。 但是，您不能使用此模式将聚合写入append-only sinks，例如任何基于文件的格式，如 Parquet 和 ORC（除非您使用 Delta Lake，我们将在下一章讨论）
+
+Complete mode
+
+在这种模式下，每个mirco-batch都将输出所有更新的聚合，无论它们的年龄或是否包含更改。 虽然此模式可用于所有类型的聚合，但对于时间窗口聚合，使用完整模式意味着即使指定了watermark也不会清除状态。 输出所有聚合需要所有过去的state，因此必须保留聚合数据。即使已定义watermark。 谨慎地在时间窗口聚合上使用此模式，因为这可能导致state大小和内存使用量的无限增加
+
+Append mode
+
+*This mode can be used only with aggregations on event-time windows and with watermarking enabled*
+
+回想一下append mode不允许以前的输出结果改变。 对于任何没有watermark的聚合，每个聚合都可以用任何未来的数据进行更新，因此这些不能以append mode输出。 只有在事件时间窗口上的聚合上启用watermark时，查询才知道聚合何时不会进一步更新。因此，append mode仅在水印时才输出每个键及其最终聚合值，而不是输出更新的行 确保聚合不会再次更新。 此模式的优点是它允许您将聚合写入append-only的sinks（例如，文件）。 缺点是输出会被watermark持续时间延迟——查询必须等待尾随watermark超过一个键的时间窗口，然后才能完成它的聚合。
+
+## Streaming Joins
+
+Structured Streaming supports joining a streaming Dataset with another static or streaming Dataset.
+
+### Stream–Static Joins
+
+```scala
+// In Scala
+// Static DataFrame [adId: String, impressionTime: Timestamp, ...]
+// reading from your static data source
+val impressionsStatic = spark.read. ...
+// Streaming DataFrame [adId: String, clickTime: Timestamp, ...]
+// reading from your streaming source
+val clicksStream = spark.readStream. ...
+// In Scala inner join
+val matched = clicksStream.join(impressionsStatic, "adId")
+
+// In Scala left outer join
+val matched = clicksStream.join(impressionsStatic, Seq("adId"), "leftOuter")
+```
+
+注意点
+
+1. static join is stateless operation
+2. static DataFrame 如果被 重复读取的话, 考虑使用cache, 用来加速
+3. 如果定义了静态 DataFrame 的数据源中的底层数据发生了变化，流式查询是否能看到这些变化取决于datasource的具体行为。 例如，如果静态 DataFrame 是在文件上定义的，那么在重新启动流式查询之前，不会拾取对这些文件的更改（例如，追加）
+
+### Stream-Stream Joins
+
+```scala
+// In Scala
+// Streaming DataFrame [adId: String, impressionTime: Timestamp, ...]
+val impressions = spark.readStream. ...
+// Streaming DataFrame[adId: String, clickTime: Timestamp, ...]
+val clicks = spark.readStream. ...
+val matched = impressions.join(clicks, "adId")
+```
+
+The engine will buffer all clicks and impressions as state, and will generate a matching impression-and-click as soon as a received click matches a buffered impression (or vice versa, depending on which was received first).
+
+注意两点 (to limit the streaming state maintained by stream-stream joins)
+
+1. What is the maximum time range between the generation of the two events at their respective sources?
+2. What is the maximum duration an event can be delayed in transit between the source and the processing engine?
+
+两个event 从各自的datasource 来的最大时间间隔
+
+process 等待 event 从datasource 来的最大时间间隔
+
+These delay limits and event-time constraints can be encoded in the DataFrame operations using watermarks and time range conditions. In other words, you will have to do the following additional steps in the join to ensure state cleanup:
+
+1. Define watermark delays on both inputs, such that the engine knows how delayed the input can be (similar to with streaming aggregations).
+2. Define a constraint on event time across the two inputs, such that the engine can figure out when old rows of one input are not going to be required (i.e., will not satisfy the time constraint) for matches with the other input. This constraint can be defined in one of the following ways:
+   1. Time range join conditions (e.g., join condition = "leftTime BETWEEN rightTime AND rightTime + INTERVAL 1 HOUR")
+   2. Join on event-time windows (e.g., join condition = "leftTimeWindow = rightTimeWindow")
+
+#### Inner joins with optional watermarking
+
+```scala
+// In Scala
+// Define watermarks
+val impressionsWithWatermark = impressions
+ .selectExpr("adId AS impressionAdId", "impressionTime")
+ .withWatermark("impressionTime", "2 hours ")
+
+val clicksWithWatermark = clicks
+ .selectExpr("adId AS clickAdId", "clickTime")
+ .withWatermark("clickTime", "3 hours")
+
+// Inner join with time range conditions
+impressionsWithWatermark.join(clicksWithWatermark,
+ expr("""
+ clickAdId = impressionAdId AND
+ clickTime BETWEEN impressionTime AND impressionTime + interval 1 hour"""))
+```
+
+1. impressions 会被buffered 最多 4 个小时  (3 + 1)
+2. clicks 最多会被buffered 2个小时, Conversely, clicks need to be buffered for at most two hours (in event time), as a two-hour-late impression may match with a click received two hours ago.
+
+![](https://raw.githubusercontent.com/feyfree/my-github-images/main/20220616185907-structured-streaming-automatically-calculates-thresholds-for-state-cleanup-using-watermark-delays-and-time-range-conditions.png)
+
+inner joins 需要注意的地方
+
+1. 对于inner joins, 指明 watermarking 还有 event-time 的约束都不是必须项目 (optional).  In other words, at the risk of potentially unbounded state, you may choose not to specify them. Only when both are specified will you get state cleanup.
+2. Similar to the guarantees provided by watermarking on aggregations, a watermark delay of two hours guarantees that the engine will never drop or not match any data that is less than two hours delayed, but data delayed by more than two hours may or may not get processed. (watermark 延迟之内的数据不会丢弃, 超过watermark 的延迟的可能不会被执行)
+
+#### Outer joins with watermarking
+
+outer join 像是去并集, 比如是left outer, 是左边匹配右边, 如果右边匹配不上, 默认为NULL
+
+```scala
+// In Scala
+// Left outer join with time range conditions
+impressionsWithWatermark.join(clicksWithWatermark,
+ expr("""
+ clickAdId = impressionAdId AND
+ clickTime BETWEEN impressionTime AND impressionTime + interval 1 hour"""),
+ "leftOuter") // Only change: set the outer join type
+```
+
+注意点
+
+1. Unlike with inner joins, the watermark delay and event-time constraints are not optional for outer joins. This is because for generating the NULL results, the engine must know when an event is not going to match with anything else in the future. For correct outer join results and state cleanup, the watermarking and event-time constraints must be specified.(意思是 outer join 必须要指明watermark 还有 event time 限制)
+2. Consequently, the outer NULL results will be generated with a delay as the engine has to wait for a while to ensure that there neither were nor would be any matches. This delay is the maximum buffering time (with respect to event time) calculated by the engine for each event as discussed in the previous section (i.e., four hours for impressions and two hours for clicks).
+
+## Arbitrary Stateful Computations
+
+The operation mapGroupsWithState() and its more flexible counterpart flatMapGroupsWithState() are designed for such complex analytical use cases 
+
+Spark 3.0 中, 这两个api 只在 Java 和 Scala 里面有
+
+用法略
+
+## Performance Tuning
+
+1. Cluster resource provisioning.
+
+   allocation should be done based on the nature of the streaming queries: stateless queries usually need more cores, and stateful queries usually need more memory
+
+2. Number of partitions for shuffles
+
+对于structured stream查询，shuffle 分区的数量通常需要设置得比大多数批处理查询低得多——过多地划分计算会增加开销并降低脱兔量。 此外，由于有状态操作的shuffle 由于 checkpointing 而具有显着更高的任务开销。 因此，对于stateful和触发间隔为几秒到几分钟的流式查询，建议将 shuffle 分区的数量从默认值 200 调整到最多分配核心数的两到三倍。
+
+3. Setting source rate limits for stability
+
+   1. Setting the limit too low can cause the query to underutilize allocated resour‐ ces and fall behind the input rate.
+   2. Limits do not effectively guard against sustained increases in input rate. While stability is maintained, the volume of buffered, unprocessed data will grow indefinitely at the source and so will the end-to-end latencies
+
+4. Multiple streaming queries in the same Spark application
+
+   1. Executing each query continuously uses resources in the Spark driver (i.e., the JVM where it is running). This limits the number of queries that the driver can execute simultaneously. Hitting those limits can either bottleneck the task scheduling (i.e., underutilizing the executors) or exceed memory limits
+   2. You can ensure fairer resource allocation between queries in the same context by setting them to run in separate scheduler pools. Set the SparkContext’s thread-local property spark.scheduler.pool to a different string value for each stream:
+
+   ```scala
+   // In Scala
+   // Run streaming query1 in scheduler pool1
+   spark.sparkContext.setLocalProperty("spark.scheduler.pool", "pool1")
+   df.writeStream.queryName("query1").format("parquet").start(path1)
+   // Run streaming query2 in scheduler pool2
+   spark.sparkContext.setLocalProperty("spark.scheduler.pool", "pool2")
+   df.writeStream.queryName("query2").format("parquet").start(path2)
+   ```
+
+   
